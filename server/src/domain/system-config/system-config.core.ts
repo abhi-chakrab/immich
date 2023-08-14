@@ -4,6 +4,8 @@ import {
   SystemConfigEntity,
   SystemConfigKey,
   SystemConfigValue,
+  ToneMapping,
+  TranscodeHWAccel,
   TranscodePolicy,
   VideoCodec,
 } from '@app/infra/entities';
@@ -27,6 +29,8 @@ export const defaults = Object.freeze<SystemConfig>({
     maxBitrate: '0',
     twoPass: false,
     transcode: TranscodePolicy.REQUIRED,
+    tonemap: ToneMapping.HABLE,
+    accel: TranscodeHWAccel.DISABLED,
   },
   job: {
     [QueueName.BACKGROUND_TASK]: { concurrency: 5 },
@@ -48,6 +52,7 @@ export const defaults = Object.freeze<SystemConfig>({
     mobileOverrideEnabled: false,
     mobileRedirectUri: '',
     scope: 'openid email profile',
+    storageLabelClaim: 'preferred_username',
     buttonText: 'Login with OAuth',
     autoRegister: true,
     autoLaunch: false,
@@ -58,6 +63,11 @@ export const defaults = Object.freeze<SystemConfig>({
 
   storageTemplate: {
     template: '{{y}}/{{y}}-{{MM}}-{{dd}}/{{filename}}',
+  },
+
+  thumbnail: {
+    webpSize: 250,
+    jpegSize: 1440,
   },
 });
 

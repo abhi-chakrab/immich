@@ -5,7 +5,7 @@
   import SettingSwitch from '$lib/components/admin-page/settings/setting-switch.svelte';
   import Button from '$lib/components/elements/buttons/button.svelte';
   import { handleError } from '$lib/utils/handle-error';
-  import { AlbumResponseDto, api, AssetResponseDto, SharedLinkResponseDto, SharedLinkType } from '@api';
+  import { api, SharedLinkResponseDto, SharedLinkType } from '@api';
   import { createEventDispatcher, onMount } from 'svelte';
   import Link from 'svelte-material-icons/Link.svelte';
   import BaseModal from '../base-modal.svelte';
@@ -13,9 +13,8 @@
   import DropdownButton from '../dropdown-button.svelte';
   import { notificationController, NotificationType } from '../notification/notification';
 
-  export let shareType: SharedLinkType;
-  export let sharedAssets: AssetResponseDto[] = [];
-  export let album: AlbumResponseDto | undefined = undefined;
+  export let albumId: string | undefined = undefined;
+  export let assetIds: string[] = [];
   export let editingLink: SharedLinkResponseDto | undefined = undefined;
 
   let sharedLink: string | null = null;
@@ -33,6 +32,8 @@
     options: ['Never', '30 minutes', '1 hour', '6 hours', '1 day', '7 days', '30 days'],
   };
 
+  $: shareType = albumId ? SharedLinkType.Album : SharedLinkType.Individual;
+
   onMount(async () => {
     if (editingLink) {
       if (editingLink.description) {
@@ -41,6 +42,9 @@
       allowUpload = editingLink.allowUpload;
       allowDownload = editingLink.allowDownload;
       showExif = editingLink.showExif;
+
+      albumId = editingLink.album?.id;
+      assetIds = editingLink.assets.map(({ id }) => id);
     }
 
     const module = await import('copy-image-clipboard');
@@ -56,8 +60,8 @@
       const { data } = await api.sharedLinkApi.createSharedLink({
         sharedLinkCreateDto: {
           type: shareType,
-          albumId: album ? album.id : undefined,
-          assetIds: sharedAssets.map((a) => a.id),
+          albumId,
+          assetIds,
           expiresAt: expirationDate,
           allowUpload,
           description,
@@ -140,7 +144,7 @@
 
 <BaseModal on:close={() => dispatch('close')}>
   <svelte:fragment slot="title">
-    <span class="flex gap-2 place-items-center">
+    <span class="flex place-items-center gap-2">
       <Link size={24} />
       {#if editingLink}
         <p class="font-medium text-immich-fg dark:text-immich-dark-fg">Edit link</p>
@@ -151,7 +155,7 @@
   </svelte:fragment>
 
   <section class="mx-6 mb-6">
-    {#if shareType == SharedLinkType.Album}
+    {#if shareType === SharedLinkType.Album}
       {#if !editingLink}
         <div>Let anyone with the link see photos and people in this album.</div>
       {:else}
@@ -163,7 +167,7 @@
       {/if}
     {/if}
 
-    {#if shareType == SharedLinkType.Individual}
+    {#if shareType === SharedLinkType.Individual}
       {#if !editingLink}
         <div>Let anyone with the link see the selected photo(s)</div>
       {:else}
@@ -175,10 +179,10 @@
       {/if}
     {/if}
 
-    <div class="mt-4 mb-2">
+    <div class="mb-2 mt-4">
       <p class="text-xs">LINK OPTIONS</p>
     </div>
-    <div class="p-4 bg-gray-100 dark:bg-black/40 rounded-lg">
+    <div class="rounded-lg bg-gray-100 p-4 dark:bg-black/40">
       <div class="flex flex-col">
         <div class="mb-2">
           <SettingInputField inputType={SettingInputFieldType.TEXT} label="Description" bind:value={description} />
@@ -198,11 +202,11 @@
 
         <div class="text-sm">
           {#if editingLink}
-            <p class="my-2 immich-form-label">
+            <p class="immich-form-label my-2">
               <SettingSwitch bind:checked={shouldChangeExpirationTime} title={'Change expiration time'} />
             </p>
           {:else}
-            <p class="my-2 immich-form-label">Expire after</p>
+            <p class="immich-form-label my-2">Expire after</p>
           {/if}
 
           <DropdownButton

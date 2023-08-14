@@ -15,6 +15,7 @@
 
   let infoPrimaryColor = '#4250AF';
   let errorPrimaryColor = '#E64132';
+  let warningPrimaryColor = '#D08613';
 
   $: icon = notificationInfo.type === NotificationType.Error ? CloseCircleOutline : InformationOutline;
 
@@ -26,6 +27,10 @@
     if (notificationInfo.type === NotificationType.Error) {
       return '#FBE8E6';
     }
+
+    if (notificationInfo.type === NotificationType.Warning) {
+      return '#FFF6DC';
+    }
   };
 
   $: borderStyle = () => {
@@ -36,6 +41,10 @@
     if (notificationInfo.type === NotificationType.Error) {
       return '1px solid #F0E8E7';
     }
+
+    if (notificationInfo.type === NotificationType.Warning) {
+      return '1px solid #FFE6A5';
+    }
   };
 
   $: primaryColor = () => {
@@ -45,6 +54,10 @@
 
     if (notificationInfo.type === NotificationType.Error) {
       return errorPrimaryColor;
+    }
+
+    if (notificationInfo.type === NotificationType.Warning) {
+      return warningPrimaryColor;
     }
   };
 
@@ -69,16 +82,17 @@
   };
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   transition:fade={{ duration: 250 }}
   style:background-color={backgroundColor()}
   style:border={borderStyle()}
-  class="min-h-[80px] w-[300px] rounded-2xl z-[999999] shadow-md p-4 mb-4 hover:cursor-pointer"
+  class="z-[999999] mb-4 min-h-[80px] w-[300px] rounded-2xl p-4 shadow-md hover:cursor-pointer"
   on:click={handleClick}
   on:keydown={handleClick}
 >
   <div class="flex justify-between">
-    <div class="flex gap-2 place-items-center">
+    <div class="flex place-items-center gap-2">
       <svelte:component this={icon} color={primaryColor()} size="20" />
       <h2 style:color={primaryColor()} class="font-medium" data-testid="title">
         {notificationInfo.type.toString()}
@@ -89,7 +103,7 @@
     </button>
   </div>
 
-  <p class="whitespace-pre-wrap text-sm pl-[28px] pr-[16px]" data-testid="message">
+  <p class="whitespace-pre-wrap pl-[28px] pr-[16px] text-sm" data-testid="message">
     {notificationInfo.message}
   </p>
 </div>

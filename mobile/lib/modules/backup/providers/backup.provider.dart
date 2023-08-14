@@ -207,6 +207,9 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       type: RequestType.common,
     );
 
+    // Map of id -> album for quick album lookup later on.
+    Map<String, AssetPathEntity> albumMap = {};
+
     log.info('Found ${albums.length} local albums');
 
     for (AssetPathEntity album in albums) {
@@ -235,6 +238,8 @@ class BackupNotifier extends StateNotifier<BackUpState> {
         }
 
         availableAlbums.add(availableAlbum);
+
+        albumMap[album.id] = album;
       }
     }
 
@@ -270,29 +275,36 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     }
 
     // Generate AssetPathEntity from id to add to local state
-    try {
-      final Set<AvailableAlbum> selectedAlbums = {};
-      for (final BackupAlbum ba in selectedBackupAlbums) {
-        final albumAsset = await AssetPathEntity.fromId(ba.id);
+    final Set<AvailableAlbum> selectedAlbums = {};
+    for (final BackupAlbum ba in selectedBackupAlbums) {
+      final albumAsset = albumMap[ba.id];
+
+      if (albumAsset != null) {
         selectedAlbums.add(
           AvailableAlbum(albumEntity: albumAsset, lastBackup: ba.lastBackup),
         );
+      } else {
+        log.severe('Selected album not found');
       }
+    }
 
-      final Set<AvailableAlbum> excludedAlbums = {};
-      for (final BackupAlbum ba in excludedBackupAlbums) {
-        final albumAsset = await AssetPathEntity.fromId(ba.id);
+    final Set<AvailableAlbum> excludedAlbums = {};
+    for (final BackupAlbum ba in excludedBackupAlbums) {
+      final albumAsset = albumMap[ba.id];
+
+      if (albumAsset != null) {
         excludedAlbums.add(
           AvailableAlbum(albumEntity: albumAsset, lastBackup: ba.lastBackup),
         );
+      } else {
+        log.severe('Excluded album not found');
       }
-      state = state.copyWith(
-        selectedBackupAlbums: selectedAlbums,
-        excludedBackupAlbums: excludedAlbums,
-      );
-    } catch (e, stackTrace) {
-      log.severe("Failed to generate album from id", e, stackTrace);
     }
+
+    state = state.copyWith(
+      selectedBackupAlbums: selectedAlbums,
+      excludedBackupAlbums: excludedAlbums,
+    );
 
     debugPrint("_getBackupAlbumsInfo takes ${stopwatch.elapsedMilliseconds}ms");
   }
@@ -376,7 +388,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
 
     if (state.backupProgress != BackUpProgressEnum.inBackground) {
       await _getBackupAlbumsInfo();
-      await _updateServerInfo();
+      await updateServerInfo();
       await _updateBackupAssetCount();
     }
   }
@@ -453,7 +465,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
         _onSetCurrentBackupAsset,
         _onBackupError,
       );
-      await _notifyBackgroundServiceCanRun();
+      await notifyBackgroundServiceCanRun();
     } else {
       openAppSettings();
     }
@@ -475,7 +487,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
 
   void cancelBackup() {
     if (state.backupProgress != BackUpProgressEnum.inProgress) {
-      _notifyBackgroundServiceCanRun();
+      notifyBackgroundServiceCanRun();
     }
     state.cancelToken.cancel();
     state = state.copyWith(
@@ -525,7 +537,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       _updatePersistentAlbumsSelection();
     }
 
-    _updateServerInfo();
+    updateServerInfo();
   }
 
   void _onUploadProgress(int sent, int total) {
@@ -534,7 +546,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     );
   }
 
-  Future<void> _updateServerInfo() async {
+  Future<void> updateServerInfo() async {
     final serverInfo = await _serverInfoService.getServerInfo();
 
     // Update server info
@@ -557,14 +569,19 @@ class BackupNotifier extends StateNotifier<BackUpState> {
 
     // Check if this device is enable backup by the user
     if (state.autoBackup) {
-      // check if backup is alreayd in process - then return
+      // check if backup is already in process - then return
       if (state.backupProgress == BackUpProgressEnum.inProgress) {
-        log.info("[_resumeBackup] Backup is already in progress - abort");
+        log.info("[_resumeBackup] Auto Backup is already in progress - abort");
         return;
       }
 
       if (state.backupProgress == BackUpProgressEnum.inBackground) {
         log.info("[_resumeBackup] Background backup is running - abort");
+        return;
+      }
+
+      if (state.backupProgress == BackUpProgressEnum.manualInProgress) {
+        log.info("[_resumeBackup] Manual upload is running - abort");
         return;
       }
 
@@ -582,7 +599,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
         .findAll();
     final List<BackupAlbum> excludedBackupAlbums = await _db.backupAlbums
         .filter()
-        .selectionEqualTo(BackupSelection.select)
+        .selectionEqualTo(BackupSelection.exclude)
         .findAll();
     Set<AvailableAlbum> selectedAlbums = state.selectedBackupAlbums;
     Set<AvailableAlbum> excludedAlbums = state.excludedBackupAlbums;
@@ -634,7 +651,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     return result;
   }
 
-  Future<void> _notifyBackgroundServiceCanRun() async {
+  Future<void> notifyBackgroundServiceCanRun() async {
     const allowedStates = [
       AppStateEnum.inactive,
       AppStateEnum.paused,
@@ -643,6 +660,11 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     if (allowedStates.contains(ref.read(appStateProvider.notifier).state)) {
       _backgroundService.releaseLock();
     }
+  }
+
+  BackUpProgressEnum get backupProgress => state.backupProgress;
+  void updateBackupProgress(BackUpProgressEnum backupProgress) {
+    state = state.copyWith(backupProgress: backupProgress);
   }
 }
 

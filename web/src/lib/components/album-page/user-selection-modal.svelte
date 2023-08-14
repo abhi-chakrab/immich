@@ -11,11 +11,14 @@
   import { AppRoute } from '$lib/constants';
 
   export let album: AlbumResponseDto;
-  export let sharedUsersInAlbum: Set<UserResponseDto>;
   let users: UserResponseDto[] = [];
   let selectedUsers: UserResponseDto[] = [];
 
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher<{
+    select: UserResponseDto[];
+    share: void;
+    close: void;
+  }>();
   let sharedLinks: SharedLinkResponseDto[] = [];
   onMount(async () => {
     await getSharedLinks();
@@ -25,7 +28,7 @@
     users = data.filter((user) => !(user.deletedAt || user.id === album.ownerId));
 
     // Remove the existed shared users from the album
-    sharedUsersInAlbum.forEach((sharedUser) => {
+    album.sharedUsers.forEach((sharedUser) => {
       users = users.filter((user) => user.id !== sharedUser.id);
     });
   });
@@ -36,7 +39,7 @@
     sharedLinks = data.filter((link) => link.album?.id === album.id);
   };
 
-  const selectUser = (user: UserResponseDto) => {
+  const handleSelect = (user: UserResponseDto) => {
     if (selectedUsers.includes(user)) {
       selectedUsers = selectedUsers.filter((selectedUser) => selectedUser.id !== user.id);
     } else {
@@ -44,33 +47,29 @@
     }
   };
 
-  const deselectUser = (user: UserResponseDto) => {
+  const handleUnselect = (user: UserResponseDto) => {
     selectedUsers = selectedUsers.filter((selectedUser) => selectedUser.id !== user.id);
-  };
-
-  const onSharedLinkClick = () => {
-    dispatch('sharedlinkclick');
   };
 </script>
 
 <BaseModal on:close={() => dispatch('close')}>
   <svelte:fragment slot="title">
-    <span class="flex gap-2 place-items-center">
+    <span class="flex place-items-center gap-2">
       <ImmichLogo width={24} />
       <p class="font-medium">Invite to album</p>
     </span>
   </svelte:fragment>
 
-  <div class="max-h-[300px] overflow-y-auto immich-scrollbar">
+  <div class="immich-scrollbar max-h-[300px] overflow-y-auto">
     {#if selectedUsers.length > 0}
-      <div class="flex gap-4 py-2 px-5 overflow-x-auto place-items-center mb-2">
+      <div class="mb-2 flex place-items-center gap-4 overflow-x-auto px-5 py-2">
         <p class="font-medium">To</p>
 
         {#each selectedUsers as user}
           {#key user.id}
             <button
-              on:click={() => deselectUser(user)}
-              class="flex gap-1 place-items-center border border-gray-400 rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              on:click={() => handleUnselect(user)}
+              class="flex place-items-center gap-1 rounded-full border border-gray-400 p-1 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
             >
               <UserAvatar {user} size="sm" autoColor />
               <p class="text-xs font-medium">{user.firstName} {user.lastName}</p>
@@ -81,17 +80,17 @@
     {/if}
 
     {#if users.length > 0}
-      <p class="text-xs font-medium px-5">SUGGESTIONS</p>
+      <p class="px-5 text-xs font-medium">SUGGESTIONS</p>
 
       <div class="my-4">
         {#each users as user}
           <button
-            on:click={() => selectUser(user)}
-            class="w-full flex place-items-center gap-4 py-4 px-5 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            on:click={() => handleSelect(user)}
+            class="flex w-full place-items-center gap-4 px-5 py-4 transition-all hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             {#if selectedUsers.includes(user)}
               <span
-                class="bg-immich-primary dark:bg-immich-dark-primary text-white dark:text-immich-dark-bg rounded-full w-12 h-12 border flex place-items-center place-content-center text-3xl dark:border-immich-dark-gray"
+                class="flex h-12 w-12 place-content-center place-items-center rounded-full border bg-immich-primary text-3xl text-white dark:border-immich-dark-gray dark:bg-immich-dark-primary dark:text-immich-dark-bg"
                 >✓</span
               >
             {:else}
@@ -111,23 +110,23 @@
         {/each}
       </div>
     {:else}
-      <p class="text-sm p-5">
+      <p class="p-5 text-sm">
         Looks like you have shared this album with all users or you don't have any user to share with.
       </p>
     {/if}
 
     {#if selectedUsers.length > 0}
       <div class="flex place-content-end p-5">
-        <Button size="sm" rounded="lg" on:click={() => dispatch('add-user', { selectedUsers })}>Add</Button>
+        <Button size="sm" rounded="lg" on:click={() => dispatch('select', selectedUsers)}>Add</Button>
       </div>
     {/if}
   </div>
 
   <hr />
-  <div id="shared-buttons" class="flex my-4 justify-around place-items-center place-content-center">
+  <div id="shared-buttons" class="my-4 flex place-content-center place-items-center justify-around">
     <button
-      class="flex flex-col gap-2 place-items-center place-content-center hover:cursor-pointer"
-      on:click={onSharedLinkClick}
+      class="flex flex-col place-content-center place-items-center gap-2 hover:cursor-pointer"
+      on:click={() => dispatch('share')}
     >
       <Link size={24} />
       <p class="text-sm">Create link</p>
@@ -135,7 +134,7 @@
 
     {#if sharedLinks.length}
       <button
-        class="flex flex-col gap-2 place-items-center place-content-center hover:cursor-pointer"
+        class="flex flex-col place-content-center place-items-center gap-2 hover:cursor-pointer"
         on:click={() => goto(AppRoute.SHARED_LINKS)}
       >
         <ShareCircle size={24} />

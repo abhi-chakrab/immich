@@ -234,7 +234,7 @@ export class TypesenseRepository implements ISearchRepository {
       .documents()
       .search({
         q: query,
-        query_by: 'albumName',
+        query_by: ['albumName', 'description'].join(','),
         filter_by: this.getAlbumFilters(filters),
       });
 
@@ -385,7 +385,8 @@ export class TypesenseRepository implements ISearchRepository {
       custom = { ...custom, geo: [lat, lng] };
     }
 
-    const people = asset.faces?.map((face) => face.person.name).filter((name) => name) || [];
+    const people =
+      asset.faces?.filter((face) => !face.person.isHidden && face.person.name).map((face) => face.person.name) || [];
     if (people.length) {
       custom = { ...custom, people };
     }

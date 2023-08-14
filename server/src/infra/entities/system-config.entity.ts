@@ -23,6 +23,8 @@ export enum SystemConfigKey {
   FFMPEG_MAX_BITRATE = 'ffmpeg.maxBitrate',
   FFMPEG_TWO_PASS = 'ffmpeg.twoPass',
   FFMPEG_TRANSCODE = 'ffmpeg.transcode',
+  FFMPEG_ACCEL = 'ffmpeg.accel',
+  FFMPEG_TONEMAP = 'ffmpeg.tonemap',
 
   JOB_THUMBNAIL_GENERATION_CONCURRENCY = 'job.thumbnailGeneration.concurrency',
   JOB_METADATA_EXTRACTION_CONCURRENCY = 'job.metadataExtraction.concurrency',
@@ -40,6 +42,7 @@ export enum SystemConfigKey {
   OAUTH_CLIENT_ID = 'oauth.clientId',
   OAUTH_CLIENT_SECRET = 'oauth.clientSecret',
   OAUTH_SCOPE = 'oauth.scope',
+  OAUTH_STORAGE_LABEL_CLAIM = 'oauth.storageLabelClaim',
   OAUTH_AUTO_LAUNCH = 'oauth.autoLaunch',
   OAUTH_BUTTON_TEXT = 'oauth.buttonText',
   OAUTH_AUTO_REGISTER = 'oauth.autoRegister',
@@ -49,6 +52,9 @@ export enum SystemConfigKey {
   PASSWORD_LOGIN_ENABLED = 'passwordLogin.enabled',
 
   STORAGE_TEMPLATE = 'storageTemplate.template',
+
+  THUMBNAIL_WEBP_SIZE = 'thumbnail.webpSize',
+  THUMBNAIL_JPEG_SIZE = 'thumbnail.jpegSize',
 }
 
 export enum TranscodePolicy {
@@ -70,6 +76,20 @@ export enum AudioCodec {
   OPUS = 'opus',
 }
 
+export enum TranscodeHWAccel {
+  NVENC = 'nvenc',
+  QSV = 'qsv',
+  VAAPI = 'vaapi',
+  DISABLED = 'disabled',
+}
+
+export enum ToneMapping {
+  HABLE = 'hable',
+  MOBIUS = 'mobius',
+  REINHARD = 'reinhard',
+  DISABLED = 'disabled',
+}
+
 export interface SystemConfig {
   ffmpeg: {
     crf: number;
@@ -81,6 +101,8 @@ export interface SystemConfig {
     maxBitrate: string;
     twoPass: boolean;
     transcode: TranscodePolicy;
+    accel: TranscodeHWAccel;
+    tonemap: ToneMapping;
   };
   job: Record<QueueName, { concurrency: number }>;
   oauth: {
@@ -89,6 +111,7 @@ export interface SystemConfig {
     clientId: string;
     clientSecret: string;
     scope: string;
+    storageLabelClaim: string;
     buttonText: string;
     autoRegister: boolean;
     autoLaunch: boolean;
@@ -100,5 +123,9 @@ export interface SystemConfig {
   };
   storageTemplate: {
     template: string;
+  };
+  thumbnail: {
+    webpSize: number;
+    jpegSize: number;
   };
 }

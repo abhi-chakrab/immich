@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
   export type Color = 'primary' | 'pink' | 'red' | 'yellow' | 'blue' | 'green';
-  export type Size = 'full' | 'sm' | 'md' | 'lg';
+  export type Size = 'full' | 'sm' | 'md' | 'lg' | 'xl';
 </script>
 
 <script lang="ts">
@@ -28,8 +28,9 @@
   const sizeClasses: Record<Size, string> = {
     full: 'w-full h-full',
     sm: 'w-7 h-7',
-    md: 'w-12 h-12',
-    lg: 'w-20 h-20',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12',
+    xl: 'w-20 h-20',
   };
 
   // Get color based on the user UUID.
@@ -49,7 +50,7 @@
 </script>
 
 <figure
-  class="{sizeClass} {colorClass} {interactiveClass} shadow-md overflow-hidden"
+  class="{sizeClass} {colorClass} {interactiveClass} overflow-hidden shadow-md"
   class:rounded-full={rounded}
   title={showTitle ? title : undefined}
 >
@@ -57,7 +58,7 @@
     <img
       src={api.getProfileImageUrl(user.id)}
       alt="Profile image of {title}"
-      class="object-cover w-full h-full"
+      class="h-full w-full object-cover"
       class:hidden={showFallback}
       draggable="false"
       use:imageLoad
@@ -66,9 +67,10 @@
   {/if}
   {#if showFallback}
     <span
-      class="flex justify-center items-center w-full h-full select-none"
+      class="flex h-full w-full select-none items-center justify-center"
       class:text-xs={size === 'sm'}
       class:text-lg={size === 'lg'}
+      class:text-xl={size === 'xl'}
       class:font-medium={!autoColor}
       class:font-semibold={autoColor}
     >

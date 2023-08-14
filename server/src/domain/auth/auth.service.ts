@@ -1,12 +1,5 @@
 import { SystemConfig, UserEntity } from '@app/infra/entities';
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import cookieParser from 'cookie';
 import { IncomingHttpHeaders } from 'http';
 import { DateTime } from 'luxon';
@@ -90,7 +83,7 @@ export class AuthService {
 
     if (!user) {
       this.logger.warn(`Failed login attempt for user ${dto.email} from ip address ${details.clientIp}`);
-      throw new BadRequestException('Incorrect email or password');
+      throw new UnauthorizedException('Incorrect email or password');
     }
 
     return this.createLoginResponse(user, AuthType.PASSWORD, details);
@@ -129,21 +122,16 @@ export class AuthService {
       throw new BadRequestException('The server already has an admin');
     }
 
-    try {
-      const admin = await this.userCore.createUser({
-        isAdmin: true,
-        email: dto.email,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        password: dto.password,
-        storageLabel: 'admin',
-      });
+    const admin = await this.userCore.createUser({
+      isAdmin: true,
+      email: dto.email,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      password: dto.password,
+      storageLabel: 'admin',
+    });
 
-      return mapAdminSignupResponse(admin);
-    } catch (error) {
-      this.logger.error(`Unable to register admin user: ${error}`, (error as Error).stack);
-      throw new InternalServerErrorException('Failed to register new admin user');
-    }
+    return mapAdminSignupResponse(admin);
   }
 
   async validate(headers: IncomingHttpHeaders, params: Record<string, string>): Promise<AuthUserDto | null> {
@@ -240,11 +228,19 @@ export class AuthService {
       }
 
       this.logger.log(`Registering new user: ${profile.email}/${profile.sub}`);
+      this.logger.verbose(`OAuth Profile: ${JSON.stringify(profile)}`);
+
+      let storageLabel: string | null = profile[config.oauth.storageLabelClaim as keyof OAuthProfile] as string;
+      if (typeof storageLabel !== 'string') {
+        storageLabel = null;
+      }
+
       user = await this.userCore.createUser({
         firstName: profile.given_name || '',
         lastName: profile.family_name || '',
         email: profile.email,
         oauthId: profile.sub,
+        storageLabel,
       });
     }
 

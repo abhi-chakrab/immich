@@ -2,26 +2,30 @@
   import { quintOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';
 
-  export let value: string;
-  export let options: { value: string; text: string }[];
+  export let value: string | number;
+  export let options: { value: string | number; text: string }[];
   export let label = '';
   export let desc = '';
   export let name = '';
   export let isEdited = false;
+  export let number = false;
 
   const handleChange = (e: Event) => {
     value = (e.target as HTMLInputElement).value;
+    if (number) {
+      value = parseInt(value);
+    }
   };
 </script>
 
-<div class="w-full">
-  <div class={`flex place-items-center gap-1 h-[26px]`}>
+<div class="mb-4 w-full">
+  <div class={`flex h-[26px] place-items-center gap-1`}>
     <label class={`immich-form-label text-sm`} for="{name}-select">{label}</label>
 
     {#if isEdited}
       <div
         transition:fly={{ x: 10, duration: 200, easing: quintOut }}
-        class="bg-orange-100 px-2 rounded-full text-orange-900 text-[10px]"
+        class="rounded-full bg-orange-100 px-2 text-[10px] text-orange-900"
       >
         Unsaved change
       </div>
@@ -29,13 +33,13 @@
   </div>
 
   {#if desc}
-    <p class="immich-form-label text-xs pb-2" id="{name}-desc">
+    <p class="immich-form-label pb-2 text-sm" id="{name}-desc">
       {desc}
     </p>
   {/if}
 
   <select
-    class="immich-form-input pb-2 w-full"
+    class="immich-form-input w-full pb-2"
     aria-describedby={desc ? `${name}-desc` : undefined}
     {name}
     id="{name}-select"
